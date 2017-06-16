@@ -1,46 +1,47 @@
-#Fall2014 - Hang Lab
 #Analysis of Enterococcus Faecalis SIM images (converted to plot profiles
-#by user in ImageJ) to observe patterns of staining by Click Chem to
-#propargylglycine (metabolic labeling).
+#by user in ImageJ with the LineMeasure.ijm macro) to observe patterns of 
+#cell wall propagation from septum.
 
 #Ratio3/30 represents the width of the cell along this profile (or axis).
-#Later stages of bacterial division exhibit more 'pinching', so bining
-#each image based on this.
+#Later stages of bacterial division exhibit more 'pinching', so bins
+#each image based on this into Early, Middle, or Late fission.
 
-#Set out to compare staining patterns along axis profile for datasets with
-#and without SagA expression (separated by bin).
+#Align profiles to septum (center of fission) and compare signal patterns
+#along axis profile by bin.
+
+#Output is a .png plot of the average wide signal, the average narrow signal
+#and the ratio signal for all images of each bin. Additionally a list of the
+#cells is given with their assigned bin is exported.
 
 #-------------
 
-#Build list of raw data from each line and data frame of index, name, and BinInfo
-#for a list of txt files in a folder.
+#Takes ImageJ processed cell as a table. Identifies center of Axis (nearest zero)
+#and categorizes into a stage of fission based on the ratio of narrow:wide at center.
+#Adds all to Line Data and to LineDetails with centerpoint and fission stage details
 ConcFiles <- function(input, filename) {
-	#open current filename at imports
+	#reads file
 	CurrLine <- read.table(paste(input, filename, sep=""), header=T)
 	
-	#print(CurrData)
+	#adds current file to list of tables
 	LineData[[i]] <<-CurrLine
 	
-	#Get index axis at zero. Avg ratio of 5 ponits nearest that point
-#	if (length((CurrLine$Axis))%%2 ==0) {
-#		MidInd<-which((CurrLine)[1]==0)
-#	} else {
-#		MidInd<-which((CurrLine)[1]==0.5)
-#	}
+	#Get index of where axis is close to zero or zero.
+  #MidInd <- which(abs(CurrLine$Axis) <= 0.5)[1]
 	MidInd <- which(trunc(CurrLine$Axis)==0)[[1]]
-	
-	#find center
+
+	# Avg narrow:wide ratio of 5 points nearest that point
 	QualRange<-((MidInd-2):(MidInd+2))
 	MidMean <- mean(CurrLine[QualRange, "Rat3.30"])
 	
 	#determine bin
-	if (MidMean >150 & MidMean < 200) {
+	if (MidMean > 150 & MidMean < 200) {
 		bin <- "M"
 	} else if (MidMean >=200) {
 		bin <- "L"
 	} else if (MidMean <=150) {
 		bin <- "E"
 	}
+	
 	#attach line vector to dataframe(LineDetails)
 	rbind(LineDetails, data.frame(i, filename, MidInd, MidMean, bin)) ->>LineDetails
 }
@@ -49,35 +50,37 @@ ConcFiles <- function(input, filename) {
 LineData<-list(NULL)
 LineDetails <-data.frame(NULL)
 
-#input and output files and iterating over files
-input = "/home/jacob/documents/Test2/"
-output = "/home/jacob/documents/Test3/"
+#input and output paths
+input = "C:/Users/jacob/Desktop/input/"
+output = "C:/Users/jacob/Documents/Tpcb/Rotations/Hang/SIM/011615/"
+
+# Categorizes all processed image data from input folder and adds
 FileList = list.files(input)
 for (i in 1:length(FileList)) {
 	ConcFiles(input, FileList[i])
 }
 
-#export LineData(necessary??) and LineDetails
+#exports LineDetails
 #write.table(LineData, paste(output, "LineData.txt", sep=""))
 write.csv(LineDetails, paste(output, "LineDetails.txt", sep=""))
 
-#separate list of dataframe (LineData) into list of columns (list of list)
-Axes <-lapply(LineData, "[[", 1)
-#not Avg30 anymore (would be column 2, actually the userdefined linewidth
-Avg30s <-lapply(LineData, "[[", 3)
-Avg3s <-lapply(LineData, "[[", 5)
-Rat3.30s <-lapply(LineData, "[[", 7)
+#Preparing Plot
 
-#Defines list of indices in LineData for each bin
+#Aggregates all Axis, Avg30, Avg3, and Ratio data into individual lists of lists
+#so that limits of x and y axis for all plots can be specified
+Axes <- lapply(LineData, "[[", "Axis")
+Avg30s <- lapply(LineData, "[[", "Avg30")
+Avg3s <- lapply(LineData, "[[", "Avg3")
+Rat3.30s <-lapply(LineData, "[[", "Rat3.30")
+Axeslim <- range(unlist(Axes))
+Avg30slim <- range(unlist(Avg30s))
+Rat3.30slim <- range(unlist(Rat3.30s))
+Avg3slim <- range(unlist(Avg3s))
+
+#Defines list of indices for each bin
 Early <- which(LineDetails$bin =="E")
 Middle <- which(LineDetails$bin =="M")
 Late <- which(LineDetails$bin =="L")
-
-#assign shared limits of x and y axis for all plots
-Axeslim<-range(unlist(Axes))
-Avg30slim<-range(unlist(Avg30s))
-Rat3.30slim<-range(unlist(Rat3.30s))
-Avg3slim<-range(unlist(Avg3s))
 
 #setup export and grid of plots
 #pdf(paste(output, "FullBinPlot.pdf", sep=""), width=8,height=6)
@@ -85,9 +88,9 @@ png(paste(output, "FullBinPlot.png", sep=""), width=10, height=10, units="in", r
 par(mfrow=c(3,3))
 
 #plot first row of plots
-#setup plot parameters
+  #setup plot parameters
 plot(NA,xlim=Axeslim, ylim=Avg30slim, main="Early, Avg30Pix", xlab="Axis", ylab="Fluor. Int.")
-#mapply-multivariate apply- to iterate along elements of lists( x and y and color and style
+  #mapply-multivariate apply- to iterate along elements of lists( x and y and color and style)
 mapply(points, x=Axes[Early], y=Avg30s[Early], type="l", col=c(1:length(Early)), lty=c(1:length(Early)))
 plot(NA,xlim=Axeslim, ylim=Avg3slim, main="Early, Avg3Pix", xlab="Axis", ylab="Fluor. Int.")
 mapply(points, x=Axes[Early], y=Avg3s[Early], type="l", col=c(1:length(Early)), lty=c(1:length(Early)))
