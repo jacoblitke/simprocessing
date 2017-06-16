@@ -11,7 +11,8 @@
 
 #Output is a .png plot of the average wide signal, the average narrow signal
 #and the ratio signal for all images of each bin. Additionally a list of the
-#cells is given with their assigned bin is exported.
+#cells is given with their assigned bin is exported. Input and ouput must be
+#folders in working directory
 
 #-------------
 
@@ -51,8 +52,8 @@ LineData<-list(NULL)
 LineDetails <-data.frame(NULL)
 
 #input and output paths
-input = "C:/Users/jacob/Desktop/input/"
-output = "C:/Users/jacob/Documents/Tpcb/Rotations/Hang/SIM/011615/"
+input = "input/"
+output = "output/"
 
 # Categorizes all processed image data from input folder and adds
 FileList = list.files(input)
